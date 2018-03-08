@@ -56,5 +56,4 @@ describe NewRelic::Agent::Instrumentation::Roda do
       end
     end
   end
-
 end
