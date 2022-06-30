@@ -11,6 +11,9 @@ module NewRelic
         TransactionNamer = NewRelic::Agent::Instrumentation::Sinatra::TransactionNamer
         module RequestMethods
           include ::NewRelic::Agent::MethodTracer
+
+          MAX_PARSEABLE_SIZE = 3 * 1024
+
           def match_all(args)
             all = super
             if all
@@ -20,9 +23,26 @@ module NewRelic
           end
           add_method_tracer :match_all
 
+          def build_params
+            rv = nil
+            body_pos = body.pos
+            begin
+              if body.size > MAX_PARSEABLE_SIZE
+                raise RangeError
+              else
+                rv = params
+              end
+            rescue RangeError
+              rv = body
+              body.seek(body_pos)
+            end
+            # TODO: filter ze params - we'll need to somehow send these parameters during the gem initialization to be used here
+            rv
+          end
+
           def if_match(args)
             instrumented = proc do |*captures|
-              @scope.perform_action_with_newrelic_trace(category: :controller, params: params) do
+              @scope.perform_action_with_newrelic_trace(category: :controller, params: build_params) do
                 yield(*captures)
               end
             end
