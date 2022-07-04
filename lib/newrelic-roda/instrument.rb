@@ -13,6 +13,8 @@ module NewRelic
           include ::NewRelic::Agent::MethodTracer
 
           MAX_PARSEABLE_SIZE = 3 * 1024
+          FILTERED_PARAMS = [:pan, :track2, :pin_block, :mac_key, :expiration_date, :pos_entry_mode]
+
 
           def match_all(args)
             all = super
@@ -23,6 +25,23 @@ module NewRelic
           end
           add_method_tracer :match_all
 
+          def filter_params(params)
+            content_type = self.env['CONTENT_TYPE']
+            rv = nil 
+            case content_type
+            when 'application/x-www-form-urlencoded'
+              begin
+                rv = JSON.parse(params.first.join).except(*FILTERED_PARAMS) unless params.empty?
+              rescue JSON::ParserError
+                rv = params
+              end
+            else
+              rv = params
+            end
+
+            params
+          end
+
           def build_params
             rv = nil
             body_pos = body.pos
@@ -30,7 +49,7 @@ module NewRelic
               if body.size > MAX_PARSEABLE_SIZE
                 raise RangeError
               else
-                rv = params
+                rv = filter_params(params)
               end
             rescue RangeError
               rv = body
