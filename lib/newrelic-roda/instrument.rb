@@ -13,8 +13,6 @@ module NewRelic
           include ::NewRelic::Agent::MethodTracer
 
           MAX_PARSEABLE_SIZE = 3 * 1024
-          FILTERED_PARAMS = [:pan, :track2, :pin_block, :mac_key, :expiration_date, :pos_entry_mode]
-
 
           def match_all(args)
             all = super
@@ -25,21 +23,9 @@ module NewRelic
           end
           add_method_tracer :match_all
 
-          def filter_params(params)
-            content_type = self.env['CONTENT_TYPE']
-            rv = nil 
-            case content_type
-            when 'application/x-www-form-urlencoded'
-              begin
-                rv = JSON.parse(params.first.join).except(*FILTERED_PARAMS) unless params.empty?
-              rescue JSON::ParserError
-                rv = params
-              end
-            else
-              rv = params
-            end
-
-            params
+          def filter_params(param_hash)         
+            filtered_params = ENV['FILTERED_PARAMS']&.split(',')
+            param_hash.with_indifferent_access.except(*filtered_params)
           end
 
           def build_params
@@ -49,13 +35,23 @@ module NewRelic
               if body.size > MAX_PARSEABLE_SIZE
                 raise RangeError
               else
-                rv = filter_params(params)
+                begin
+                  if params.empty?
+                    rv = params
+                  else
+                    parsed_body = JSON.parse(params&.first&.join)
+                    rv = filter_params(parsed_body)
+                  end 
+                rescue JSON::ParserError
+                  rv = params
+                end
               end
             rescue RangeError
               rv = body
               body.seek(body_pos)
             end
             # TODO: filter ze params - we'll need to somehow send these parameters during the gem initialization to be used here
+
             rv
           end
 
