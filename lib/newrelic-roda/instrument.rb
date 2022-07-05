@@ -30,7 +30,7 @@ module NewRelic
 
           def build_params
             rv = nil
-            body_pos = body.pos
+            body_pos = body.respond_to?(:pos) ? body.pos : 0
             begin
               if body.size > MAX_PARSEABLE_SIZE
                 raise RangeError
