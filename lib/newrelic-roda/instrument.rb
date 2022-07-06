@@ -36,11 +36,13 @@ module NewRelic
                 raise RangeError
               else
                 begin
-                  if params.empty?
-                    rv = params
-                  else
-                    parsed_body = JSON.parse(params&.first&.join)
+                  b = body.read
+
+                  if b.present? && b[0] == "{"
+                    parsed_body = JSON.parse(params.first.join)
                     rv = filter_params(parsed_body)
+                  else
+                    rv = params
                   end 
                 rescue JSON::ParserError
                   rv = params
@@ -51,7 +53,7 @@ module NewRelic
               body.seek(body_pos)
             end
             # TODO: filter ze params - we'll need to somehow send these parameters during the gem initialization to be used here
-
+            body.rewind
             rv
           end
 
