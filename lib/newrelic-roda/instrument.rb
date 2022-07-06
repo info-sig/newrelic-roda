@@ -38,7 +38,7 @@ module NewRelic
                 begin
                   b = body.read
 
-                  if b.present? && b[0] == "{"
+                  if b.present? && b[0].lstrip == "{"
                     parsed_body = JSON.parse(params.first.join)
                     rv = filter_params(parsed_body)
                   else
