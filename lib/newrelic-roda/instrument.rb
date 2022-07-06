@@ -24,7 +24,7 @@ module NewRelic
           add_method_tracer :match_all
 
           def filter_params(param_hash)         
-            filtered_params = ENV['FILTERED_PARAMS']&.split(',')
+            filtered_params = ENV['NEW_RELIC_RODA_FILTERED_PARAMS']&.split(',')
             param_hash.with_indifferent_access.except(*filtered_params)
           end
 
