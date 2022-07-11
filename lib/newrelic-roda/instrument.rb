@@ -29,6 +29,7 @@ module NewRelic
           end
 
           def build_params
+            return {}
             rv = nil
             body_pos = body.respond_to?(:pos) ? body.pos : 0
             begin
