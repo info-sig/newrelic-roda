@@ -23,20 +23,38 @@ module NewRelic
           end
           add_method_tracer :match_all
 
+          def filter_params(param_hash)         
+            filtered_params = ENV['NEW_RELIC_RODA_FILTERED_PARAMS']&.split(',')
+            param_hash.with_indifferent_access.except(*filtered_params)
+          end
+
           def build_params
+            return {}
             rv = nil
-            body_pos = body.pos
+            body_pos = body.respond_to?(:pos) ? body.pos : 0
             begin
               if body.size > MAX_PARSEABLE_SIZE
                 raise RangeError
               else
-                rv = params
+                begin
+                  b = body.read
+
+                  if b.present? && b[0].lstrip == "{"
+                    parsed_body = JSON.parse(params.first.join)
+                    rv = filter_params(parsed_body)
+                  else
+                    rv = params
+                  end 
+                rescue JSON::ParserError
+                  rv = params
+                end
               end
             rescue RangeError
               rv = body
               body.seek(body_pos)
             end
             # TODO: filter ze params - we'll need to somehow send these parameters during the gem initialization to be used here
+            body.rewind
             rv
           end
 
